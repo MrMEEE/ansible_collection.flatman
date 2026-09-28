@@ -1,0 +1,23 @@
+---
+flatman_url: "{{ lookup('env', 'FLATMAN_URL') | default(omit, true) }}"
+flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') | default(omit, true) }}"
+flatman_validate_certs: true
+flatman_timeout: 30
+
+# Appstream metadata overrides. Items accept the options of flatman_app_metadata:
+#   - app_id: org.example.App
+#     summary: A short one line summary
+#     categories: [Utility]
+flatman_app_metadata: []
+
+# Curated app picks. Items accept the options of flatman_app_pick:
+#   - app_id: org.example.App
+#     kind: day
+#     date: "2026-10-01"
+#     title: App of the day
+flatman_app_picks: []
+
+# Quality moderation actions. Items accept the options of flatman_quality_moderation:
+#   - app_id: org.example.App
+#     action: fullscreen
+flatman_quality_overrides: []

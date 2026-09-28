@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: MrMEEE
+  description: Declare flat-manager packages and optionally drive their build pipeline.
+  license: MIT
+  min_ansible_version: "2.15"
+  galaxy_tags:
+    - flatpak
+    - build
+    - packaging
+dependencies: []

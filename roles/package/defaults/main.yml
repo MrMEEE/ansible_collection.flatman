@@ -1,0 +1,27 @@
+---
+flatman_url: "{{ lookup('env', 'FLATMAN_URL') | default(omit, true) }}"
+flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') | default(omit, true) }}"
+flatman_validate_certs: true
+flatman_timeout: 30
+
+# Packages to declare. Each item accepts the options of flatman_package, for example:
+#   - package_id: org.example.App
+#     repository: stable
+#     git_repo_url: https://github.com/example/app.git
+#     branch: stable
+#     arch: x86_64
+flatman_packages: []
+
+# When true, run the build pipeline for every declared package after creating it.
+flatman_package_build: false
+
+# Pipeline stages to run when flatman_package_build is true.
+flatman_package_pipeline:
+  - start
+  - commit
+  - publish
+
+# Wait for each pipeline stage to reach a terminal state before continuing.
+flatman_package_wait: true
+flatman_package_wait_timeout: 1800
+flatman_package_wait_interval: 10

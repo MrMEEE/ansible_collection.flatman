@@ -1,0 +1,79 @@
+---
+- name: Manage GPG signing keys
+  mrmeee.flatman.flatman_gpg_key:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    email: "{{ item.email | default(omit) }}"
+    comment: "{{ item.comment | default(omit) }}"
+    key_length: "{{ item.key_length | default(omit) }}"
+    key_id: "{{ item.key_id | default(omit) }}"
+    fingerprint: "{{ item.fingerprint | default(omit) }}"
+    public_key: "{{ item.public_key | default(omit) }}"
+    private_key: "{{ item.private_key | default(omit) }}"
+    passphrase: "{{ item.passphrase | default(omit) }}"
+    passphrase_hint: "{{ item.passphrase_hint | default(omit) }}"
+    is_active: "{{ item.is_active | default(omit) }}"
+  loop: "{{ flatman_gpg_keys }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+  register: flatman_gpg_key_results
+
+- name: Manage repositories
+  mrmeee.flatman.flatman_repository:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    collection_id: "{{ item.collection_id | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    gpg_key: "{{ item.gpg_key | default(omit) }}"
+    gpg_key_id: "{{ item.gpg_key_id | default(omit) }}"
+    parent_repos: "{{ item.parent_repos | default(omit) }}"
+    is_active: "{{ item.is_active | default(omit) }}"
+  loop: "{{ flatman_repositories }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: flatman_repository_results
+
+- name: Manage repository subsets
+  mrmeee.flatman.flatman_repository_subset:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    repository: "{{ item.repository | default(omit) }}"
+    repository_id: "{{ item.repository_id | default(omit) }}"
+    collection_id: "{{ item.collection_id | default(omit) }}"
+    base_url: "{{ item.base_url | default(omit) }}"
+  loop: "{{ flatman_repository_subsets }}"
+  loop_control:
+    label: "{{ item.repository | default(item.repository_id) }}/{{ item.name }}"
+  register: flatman_repository_subset_results
+
+- name: Manage repository access tokens
+  mrmeee.flatman.flatman_token:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    repository: "{{ item.repository | default(omit) }}"
+    repository_id: "{{ item.repository_id | default(omit) }}"
+    token_type: "{{ item.token_type | default(omit) }}"
+    expires_at: "{{ item.expires_at | default(omit) }}"
+    is_active: "{{ item.is_active | default(omit) }}"
+  loop: "{{ flatman_tokens }}"
+  loop_control:
+    label: "{{ item.repository | default(item.repository_id) }}/{{ item.name }}"
+  no_log: true
+  register: flatman_token_results

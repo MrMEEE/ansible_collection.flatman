@@ -1,0 +1,41 @@
+---
+requires_ansible: '>=2.15.0'
+
+action_groups:
+  flatman:
+    - flatman_app_info
+    - flatman_app_metadata
+    - flatman_app_pick
+    - flatman_app_pick_info
+    - flatman_app_stats_info
+    - flatman_artifact
+    - flatman_artifact_info
+    - flatman_build_info
+    - flatman_build_log_info
+    - flatman_collection_info
+    - flatman_git_branch_info
+    - flatman_gpg_key
+    - flatman_gpg_key_info
+    - flatman_moderation_info
+    - flatman_moderation_request
+    - flatman_moderation_review
+    - flatman_package
+    - flatman_package_action
+    - flatman_package_info
+    - flatman_platform_info
+    - flatman_quality_moderation
+    - flatman_quality_moderation_info
+    - flatman_repository
+    - flatman_repository_info
+    - flatman_repository_subset
+    - flatman_repository_subset_info
+    - flatman_search_info
+    - flatman_status_info
+    - flatman_token
+    - flatman_token_info
+    - flatman_usage_info
+    - flatman_user
+    - flatman_user_info
+    - flatman_user_profile
+    - flatman_user_profile_info
+    - flatman_year_in_review_info

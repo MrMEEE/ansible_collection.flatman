@@ -1,0 +1,55 @@
+---
+- name: Apply appstream metadata overrides
+  mrmeee.flatman.flatman_app_metadata:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    app_id: "{{ item.app_id }}"
+    summary: "{{ item.summary | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    homepage: "{{ item.homepage | default(omit) }}"
+    icon_url: "{{ item.icon_url | default(omit) }}"
+    screenshots: "{{ item.screenshots | default(omit) }}"
+    developer_name: "{{ item.developer_name | default(omit) }}"
+    categories: "{{ item.categories | default(omit) }}"
+    keywords: "{{ item.keywords | default(omit) }}"
+    is_verified: "{{ item.is_verified | default(omit) }}"
+    is_mobile: "{{ item.is_mobile | default(omit) }}"
+  loop: "{{ flatman_app_metadata }}"
+  loop_control:
+    label: "{{ item.app_id }}"
+  register: flatman_app_metadata_results
+
+- name: Manage curated app picks
+  mrmeee.flatman.flatman_app_pick:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    id: "{{ item.id | default(omit) }}"
+    app_id: "{{ item.app_id | default(omit) }}"
+    kind: "{{ item.kind | default(omit) }}"
+    date: "{{ item.date | default(omit) }}"
+    title: "{{ item.title | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    rank: "{{ item.rank | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ flatman_app_picks }}"
+  loop_control:
+    label: "{{ item.app_id | default(item.id) }}"
+  register: flatman_app_pick_results
+
+- name: Apply quality moderation actions
+  mrmeee.flatman.flatman_quality_moderation:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    app_id: "{{ item.app_id }}"
+    action: "{{ item.action }}"
+    reason: "{{ item.reason | default(omit) }}"
+  loop: "{{ flatman_quality_overrides }}"
+  loop_control:
+    label: "{{ item.app_id }} -> {{ item.action }}"
+  register: flatman_quality_results

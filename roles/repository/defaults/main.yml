@@ -1,0 +1,24 @@
+---
+# Connection settings shared by every task in this role.
+flatman_url: "{{ lookup('env', 'FLATMAN_URL') | default(omit, true) }}"
+flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') | default(omit, true) }}"
+flatman_validate_certs: true
+flatman_timeout: 30
+
+# GPG keys to manage. Each item accepts the options of flatman_gpg_key,
+# for example:
+#   - name: release-signing-key
+#     state: generated
+#     email: release@example.com
+flatman_gpg_keys: []
+
+# Repositories to manage. Each item accepts the options of flatman_repository.
+flatman_repositories: []
+
+# Repository subsets. Each item accepts the options of flatman_repository_subset.
+flatman_repository_subsets: []
+
+# Repository access tokens. Each item accepts the options of flatman_token.
+# NOTE: the server does not enforce these tokens yet - it stores them but never
+# validates a request against them - so creating one currently grants no access.
+flatman_tokens: []

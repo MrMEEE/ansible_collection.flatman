@@ -1,0 +1,91 @@
+---
+# Read-only smoke test. Safe to run against any reachable instance.
+# Usage:
+#   export FLATMAN_URL=https://flatman.example.com
+#   export FLATMAN_API_TOKEN=...
+#   ansible-playbook collections/ansible_collections/mrmeee/flatman/playbooks/smoke.yml
+- name: Smoke test the flat-manager API
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+
+  tasks:
+    - name: Server responds
+      mrmeee.flatman.flatman_status_info:
+      register: server
+
+    - name: Read the repositories
+      mrmeee.flatman.flatman_repository_info:
+      register: repositories
+
+    - name: Read the repository subsets
+      mrmeee.flatman.flatman_repository_subset_info:
+      register: subsets
+
+    - name: Read the GPG keys
+      mrmeee.flatman.flatman_gpg_key_info:
+      register: gpg_keys
+
+    - name: Read the repository tokens
+      mrmeee.flatman.flatman_token_info:
+      register: tokens
+
+    - name: Read the packages
+      mrmeee.flatman.flatman_package_info:
+      register: packages
+
+    - name: Read the builds
+      mrmeee.flatman.flatman_build_info:
+      register: builds
+
+    - name: Read the artifacts
+      mrmeee.flatman.flatman_artifact_info:
+      register: artifacts
+
+    - name: Read the users
+      mrmeee.flatman.flatman_user_info:
+      register: users
+
+    - name: Read the public catalogue
+      mrmeee.flatman.flatman_app_info:
+      register: apps
+
+    - name: Read the platforms and runtimes
+      mrmeee.flatman.flatman_platform_info:
+      register: platforms
+
+    - name: Every read returned a list and reported no change
+      ansible.builtin.assert:
+        that:
+          - server.version is defined
+          - item.0 is sequence
+          - item.1 is false
+        fail_msg: "Unexpected result from a read-only module"
+      loop:
+        - [repositories.repositories, repositories.changed]
+        - [subsets.repository_subsets, subsets.changed]
+        - [gpg_keys.gpg_keys, gpg_keys.changed]
+        - [tokens.tokens, tokens.changed]
+        - [packages.packages, packages.changed]
+        - [builds.builds, builds.changed]
+        - [artifacts.artifacts, artifacts.changed]
+        - [users.users, users.changed]
+        - [apps.apps, apps.changed]
+        - [platforms.platforms, platforms.changed]
+      loop_control:
+        label: "item {{ ansible_loop.index0 | default(0) }}"
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg: >-
+          flat-manager {{ server.version }} -
+          {{ repositories.repositories | length }} repositories,
+          {{ packages.packages | length }} packages,
+          {{ builds.builds | length }} builds

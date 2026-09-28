@@ -1,0 +1,28 @@
+---
+namespace: mrmeee
+name: flatman
+version: 1.0.29
+readme: README.md
+authors:
+  - MrMEEE (https://github.com/MrMEEE)
+description: >-
+  Manage flat-manager-django Flatpak/OSTree repositories, packages, builds,
+  GPG keys, tokens, users and the Flathub-compatible catalogue over its REST API.
+license:
+  - MIT
+tags:
+  - flatpak
+  - ostree
+  - flathub
+  - repository
+  - packaging
+  - linux
+dependencies: {}
+repository: https://github.com/MrMEEE/ansible_collection.flatman
+documentation: https://github.com/MrMEEE/ansible_collection.flatman/tree/main/docs
+homepage: https://github.com/MrMEEE/ansible_collection.flatman
+issues: https://github.com/MrMEEE/ansible_collection.flatman/issues
+build_ignore:
+  - .venv
+  - '*.tar.gz'
+  - tests/output

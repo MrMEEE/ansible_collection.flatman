@@ -1,0 +1,78 @@
+---
+- name: Declare and build a Flatpak package
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+    app_id: org.example.App
+    app_git_url: https://github.com/example/app.git
+    # Set to true to actually build; the default converge only reconciles config.
+    do_build: false
+
+  tasks:
+    - name: Discover the available branches of the source repository
+      mrmeee.flatman.flatman_git_branch_info:
+        repo_url: "{{ app_git_url }}"
+      register: source_branches
+
+    - name: Declare the package
+      mrmeee.flatman.flatman_package:
+        package_id: "{{ app_id }}"
+        package_name: Example App
+        repository: stable
+        git_repo_url: "{{ app_git_url }}"
+        git_branch: "{{ 'main' if 'main' in source_branches.branches else 'master' }}"
+        branch: stable
+        arch: x86_64
+
+    - name: Build, commit and publish
+      when: do_build | bool
+      block:
+        - name: Start the build and wait for it to finish
+          mrmeee.flatman.flatman_package_action:
+            package_id: "{{ app_id }}"
+            action: start
+            wait: true
+            wait_timeout: 1800
+
+        - name: Commit the build into the repository
+          mrmeee.flatman.flatman_package_action:
+            package_id: "{{ app_id }}"
+            action: commit
+            wait: true
+
+        - name: Publish the commit
+          mrmeee.flatman.flatman_package_action:
+            package_id: "{{ app_id }}"
+            action: publish
+            wait: true
+
+      rescue:
+        - name: Collect the build log on failure
+          mrmeee.flatman.flatman_build_log_info:
+            package_id: "{{ app_id }}"
+            limit: 50
+          register: failed_log
+          failed_when: false
+
+        - name: Show the tail of the build log
+          ansible.builtin.debug:
+            var: failed_log.logs
+
+        - name: Re-raise the failure
+          ansible.builtin.fail:
+            msg: "Build pipeline failed for {{ app_id }}"
+
+    - name: Report the current package state
+      mrmeee.flatman.flatman_package_info:
+        package_id: "{{ app_id }}"
+      register: package
+
+    - ansible.builtin.debug:
+        msg: "{{ app_id }} is {{ package.packages[0].status }}"

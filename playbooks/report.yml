@@ -1,0 +1,50 @@
+---
+- name: Report on a flat-manager instance
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+
+  tasks:
+    - name: Server version and health
+      mrmeee.flatman.flatman_status_info:
+      register: server
+
+    - name: Repositories
+      mrmeee.flatman.flatman_repository_info:
+      register: repos
+
+    - name: Packages
+      mrmeee.flatman.flatman_package_info:
+      register: packages
+
+    - name: Failed builds
+      mrmeee.flatman.flatman_build_info:
+        status: failed
+      register: failed_builds
+
+    - name: Most popular applications over the last week
+      mrmeee.flatman.flatman_usage_info:
+        days: 7
+      register: usage
+
+    - name: Quality moderation summary
+      mrmeee.flatman.flatman_quality_moderation_info:
+        report: status
+      register: quality
+
+    - name: Print the report
+      ansible.builtin.debug:
+        msg:
+          - "flat-manager {{ server.version }} ({{ server.status }})"
+          - "Repositories: {{ repos.repositories | length }}"
+          - "Packages: {{ packages.packages | length }}"
+          - "Failed builds: {{ failed_builds.builds | length }}"
+          - "Top app: {{ (usage.apps | first).app_id | default('none') }}"
+          - "Quality: {{ quality.quality }}"

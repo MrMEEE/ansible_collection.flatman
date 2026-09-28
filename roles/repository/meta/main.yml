@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: MrMEEE
+  description: Declaratively manage flat-manager GPG keys, repositories, subsets and tokens.
+  license: MIT
+  min_ansible_version: "2.15"
+  galaxy_tags:
+    - flatpak
+    - ostree
+    - repository
+dependencies: []

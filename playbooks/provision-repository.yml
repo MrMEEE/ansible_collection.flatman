@@ -1,0 +1,51 @@
+---
+- name: Provision flat-manager repositories
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+
+  tasks:
+    - name: Generate the release signing key
+      mrmeee.flatman.flatman_gpg_key:
+        name: release-signing-key
+        email: release@example.com
+        state: generated
+
+    - name: Create the stable repository
+      mrmeee.flatman.flatman_repository:
+        name: stable
+        collection_id: org.example.Stable
+        description: Production Flatpak repository
+        gpg_key: release-signing-key
+        is_active: true
+
+    - name: Create the beta repository chained on stable
+      mrmeee.flatman.flatman_repository:
+        name: beta
+        collection_id: org.example.Beta
+        description: Pre-release Flatpak repository
+        gpg_key: release-signing-key
+        parent_repos:
+          - stable
+
+    - name: Show the resulting layout
+      mrmeee.flatman.flatman_repository_info:
+        include:
+          - subsets
+      register: repos
+
+    - name: Report repositories
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.name }} ({{ item.collection_id }}) -
+          {{ item.build_count }} builds
+      loop: "{{ repos.repositories }}"
+      loop_control:
+        label: "{{ item.name }}"

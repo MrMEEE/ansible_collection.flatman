@@ -1,0 +1,43 @@
+---
+- name: Declare packages
+  mrmeee.flatman.flatman_package:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    package_id: "{{ item.package_id }}"
+    state: "{{ item.state | default('present') }}"
+    package_name: "{{ item.package_name | default(omit) }}"
+    version: "{{ item.version | default(omit) }}"
+    git_repo_url: "{{ item.git_repo_url | default(omit) }}"
+    git_branch: "{{ item.git_branch | default(omit) }}"
+    branch: "{{ item.branch | default(omit) }}"
+    arch: "{{ item.arch | default(omit) }}"
+    status: "{{ item.status | default(omit) }}"
+    repository: "{{ item.repository | default(omit) }}"
+    repository_id: "{{ item.repository_id | default(omit) }}"
+    dependencies: "{{ item.dependencies | default(omit) }}"
+  loop: "{{ flatman_packages }}"
+  loop_control:
+    label: "{{ item.package_id }}"
+  register: flatman_package_results
+
+- name: Run the build pipeline
+  when:
+    - flatman_package_build | bool
+    - item.0.state | default('present') != 'absent'
+  mrmeee.flatman.flatman_package_action:
+    url: "{{ flatman_url }}"
+    api_token: "{{ flatman_api_token }}"
+    validate_certs: "{{ flatman_validate_certs }}"
+    timeout: "{{ flatman_timeout }}"
+    package_id: "{{ item.0.package_id }}"
+    action: "{{ item.1 }}"
+    wait: "{{ flatman_package_wait }}"
+    wait_timeout: "{{ flatman_package_wait_timeout }}"
+    wait_interval: "{{ flatman_package_wait_interval }}"
+  # Sequential per package so commit never runs before its own build finished.
+  loop: "{{ flatman_packages | product(flatman_package_pipeline) | list }}"
+  loop_control:
+    label: "{{ item.0.package_id }} -> {{ item.1 }}"
+  register: flatman_package_action_results
