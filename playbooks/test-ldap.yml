@@ -1,0 +1,56 @@
+---
+- name: Test LDAP connectivity and user lookup without changing configuration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    ldap_port: 636
+    ldap_protocol: ldaps
+  tasks:
+    - name: Require directory settings and a search user
+      ansible.builtin.assert:
+        that:
+          - ldap_hostname is defined
+          - ldap_base_dn is defined
+          - ldap_search_username is defined
+        fail_msg: Supply ldap_hostname, ldap_base_dn and ldap_search_username
+
+    - name: Test directory connection and bind
+      mrmeee.flatman.flatman_workflow_action:
+        resource: ldap-sources
+        action: test-connection
+        data:
+          hostname: "{{ ldap_hostname }}"
+          port: "{{ ldap_port | int }}"
+          protocol: "{{ ldap_protocol }}"
+          verify_certs: true
+          bind_dn: "{{ ldap_bind_dn | default('') }}"
+          source_pk: "{{ ldap_source_id | default('') }}"
+        secret_data:
+          bind_password: "{{ vault_ldap_bind_password | default('') }}"
+      no_log: true
+      register: connection_test
+
+    - name: Test directory user search
+      mrmeee.flatman.flatman_workflow_action:
+        resource: ldap-sources
+        action: test-search
+        data:
+          hostname: "{{ ldap_hostname }}"
+          port: "{{ ldap_port | int }}"
+          protocol: "{{ ldap_protocol }}"
+          verify_certs: true
+          bind_dn: "{{ ldap_bind_dn | default('') }}"
+          source_pk: "{{ ldap_source_id | default('') }}"
+          base_dn: "{{ ldap_base_dn }}"
+          search_username: "{{ ldap_search_username }}"
+          ldap_filter: "{{ ldap_filter | default('(objectClass=person)') }}"
+          attr_username: "{{ ldap_attr_username | default('uid') }}"
+        secret_data:
+          bind_password: "{{ vault_ldap_bind_password | default('') }}"
+      no_log: true
+      register: search_test

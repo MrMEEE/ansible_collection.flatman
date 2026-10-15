@@ -1,0 +1,69 @@
+---
+- name: Publish an existing Flatpak build in its configured repository
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+
+  tasks:
+    - name: Require an application ID
+      ansible.builtin.assert:
+        that:
+          - app_id is defined
+          - app_id | length > 0
+        fail_msg: "Supply the existing package ID with -e app_id=org.example.App"
+
+    - name: Read the package before publishing
+      mrmeee.flatman.flatman_package_info:
+        package_id: "{{ app_id }}"
+      register: current
+
+    - name: Require exactly one existing package
+      ansible.builtin.assert:
+        that:
+          - current.packages | length == 1
+        fail_msg: "Expected exactly one existing package for {{ app_id }}"
+
+    - name: Require a completed build
+      ansible.builtin.assert:
+        that:
+          - current.packages[0].status in ['built', 'committed', 'published']
+        fail_msg: >-
+          {{ app_id }} is {{ current.packages[0].status }}.
+          Finish the build before running this playbook; it does not start or reset builds.
+
+    - name: Commit the built package
+      mrmeee.flatman.flatman_package_action:
+        id: "{{ current.packages[0].id }}"
+        action: commit
+        wait: true
+        wait_timeout: 1800
+      when: current.packages[0].status == 'built'
+
+    - name: Publish the committed package
+      mrmeee.flatman.flatman_package_action:
+        id: "{{ current.packages[0].id }}"
+        action: publish
+        wait: true
+        wait_timeout: 1800
+      when: current.packages[0].status != 'published'
+
+    - name: Read the resulting package state
+      mrmeee.flatman.flatman_package_info:
+        id: "{{ current.packages[0].id }}"
+      register: published
+
+    - name: Verify publication
+      ansible.builtin.assert:
+        that:
+          - published.packages | length == 1
+          - published.packages[0].status == 'published'
+        success_msg: "{{ app_id }} is published in its configured repository"
+      when: not ansible_check_mode

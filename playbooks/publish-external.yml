@@ -1,0 +1,35 @@
+---
+- name: Publish an existing External app
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+    # Use pull to fetch from the remote and publish; publish only uses an existing pull.
+    external_action: publish
+
+  tasks:
+    - name: Require an existing External ref ID
+      ansible.builtin.assert:
+        that:
+          - external_ref_id is defined
+          - external_ref_id | int > 0
+        fail_msg: "Supply the existing External ID with -e external_ref_id=12"
+
+    - name: Pull or publish and wait for publication
+      mrmeee.flatman.flatman_external_ref_action:
+        id: "{{ external_ref_id }}"
+        action: "{{ external_action }}"
+        wait: true
+        wait_timeout: 1800
+      register: publication
+
+    - name: Show the External ref state
+      ansible.builtin.debug:
+        var: publication.external_ref.status

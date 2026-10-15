@@ -1,0 +1,51 @@
+---
+- name: Configure and optionally build a BuildStream source
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    do_build: false
+  tasks:
+    - name: Require an existing repository ID
+      ansible.builtin.assert:
+        that:
+          - repository_id is defined
+          - repository_id | int > 0
+        fail_msg: Supply repository_id from flatman_repository_info
+
+    - name: Configure the BuildStream source
+      mrmeee.flatman.flatman_resource:
+        resource: bst-sources
+        match:
+          name: Example Runtime
+        data:
+          repository: "{{ repository_id | int }}"
+          git_repo_url: https://github.com/example/runtime.git
+          git_branch: main
+          bst_element: runtime.bst
+          bst_version: bst2
+      register: source
+
+    - name: Queue an explicit BuildStream build
+      mrmeee.flatman.flatman_workflow_action:
+        resource: bst-sources
+        id: "{{ source.resource.id }}"
+        action: build
+      when:
+        - do_build | bool
+        - source.resource.id is defined
+
+    - name: Read source status
+      mrmeee.flatman.flatman_resource_info:
+        resource: bst-sources
+        id: "{{ source.resource.id }}"
+      register: source_status
+      when: source.resource.id is defined
+
+    - name: Report current status without claiming build completion
+      ansible.builtin.debug:
+        var: source_status

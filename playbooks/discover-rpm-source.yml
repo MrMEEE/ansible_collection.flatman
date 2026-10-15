@@ -1,0 +1,44 @@
+---
+- name: Discover remote RPM branches and spec files
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    rpm_branch: main
+  tasks:
+    - name: Require an RPM Git repository URL
+      ansible.builtin.assert:
+        that:
+          - rpm_git_url is defined
+          - rpm_git_url | length > 0
+        fail_msg: Supply rpm_git_url accessible from the server
+
+    - name: List remote branches
+      mrmeee.flatman.flatman_workflow_action:
+        resource: rpm-packages
+        action: scan-branches
+        timeout: 60
+        data:
+          url: "{{ rpm_git_url }}"
+      register: branches
+
+    - name: Find spec files in the selected branch
+      mrmeee.flatman.flatman_workflow_action:
+        resource: rpm-packages
+        action: scan-spec-files
+        timeout: 180
+        data:
+          url: "{{ rpm_git_url }}"
+          branch: "{{ rpm_branch }}"
+      register: specs
+
+    - name: Show discovered source choices
+      ansible.builtin.debug:
+        msg:
+          branches: "{{ branches.result.branches }}"
+          spec_files: "{{ specs.result.spec_files }}"
+      when: not ansible_check_mode

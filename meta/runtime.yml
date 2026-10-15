@@ -13,6 +13,8 @@ action_groups:
     - flatman_build_info
     - flatman_build_log_info
     - flatman_collection_info
+    - flatman_external_ref_action
+    - flatman_external_ref_info
     - flatman_git_branch_info
     - flatman_gpg_key
     - flatman_gpg_key_info
@@ -23,12 +25,16 @@ action_groups:
     - flatman_package_action
     - flatman_package_info
     - flatman_platform_info
+    - flatman_promotion
+    - flatman_promotion_info
     - flatman_quality_moderation
     - flatman_quality_moderation_info
     - flatman_repository
     - flatman_repository_info
     - flatman_repository_subset
     - flatman_repository_subset_info
+    - flatman_resource
+    - flatman_resource_info
     - flatman_search_info
     - flatman_status_info
     - flatman_token
@@ -39,3 +45,4 @@ action_groups:
     - flatman_user_profile
     - flatman_user_profile_info
     - flatman_year_in_review_info
+    - flatman_workflow_action

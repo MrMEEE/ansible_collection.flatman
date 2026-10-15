@@ -11,7 +11,6 @@ DOCUMENTATION = r'''
 ---
 module: flatman_quality_moderation
 short_description: Perform quality moderation actions on a flat-manager application
-version_added: 1.0.0
 description:
   - Marks an application as a fullscreen application or opens a quality review request for it.
   - Wraps the C(/api/v2/quality-moderation/<app_id>/fullscreen) and
@@ -34,14 +33,19 @@ options:
         current quality status is read first and the write is skipped when the flag is already set.
       - V(request-review) creates a new moderation request for the application. This action is imperative,
         so it always reports a change outside of check mode.
+      - V(reject-pending-reviews) rejects all pending review requests for the application.
     type: str
     required: true
-    choices: [fullscreen, request-review]
+    choices: [fullscreen, request-review, reject-pending-reviews]
+    version_added: 1.0.0
   reason:
     description:
       - Reason recorded on the moderation request, sent as the C(reason) body key.
       - Only used with O(action=request-review). The server defaults it to C(Quality review requested).
     type: str
+notes:
+  - V(reject-pending-reviews) rejects all pending requests through DELETE on the request-review endpoint.
+  - This bulk action was added in collection version 1.2.0 and reports changed when dispatched.
 seealso:
   - module: mrmeee.flatman.flatman_quality_moderation_info
   - module: mrmeee.flatman.flatman_moderation_request
@@ -101,7 +105,7 @@ def main():
     argument_spec = flatman_argument_spec()
     argument_spec.update(
         app_id=dict(type='str', required=True),
-        action=dict(type='str', required=True, choices=['fullscreen', 'request-review']),
+        action=dict(type='str', required=True, choices=['fullscreen', 'request-review', 'reject-pending-reviews']),
         reason=dict(type='str'),
     )
 
@@ -114,6 +118,11 @@ def main():
         params = module.params
         app_id = params['app_id']
         action = params['action']
+
+        if action == 'reject-pending-reviews':
+            if not module.check_mode:
+                client.delete('%s/%s/request-review' % (BASE_PATH, app_id))
+            module.exit_json(changed=True, result={}, diff={})
 
         if action == 'fullscreen':
             current = client.get('%s/%s/status' % (BASE_PATH, app_id))

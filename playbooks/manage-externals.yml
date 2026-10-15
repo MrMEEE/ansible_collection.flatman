@@ -1,0 +1,50 @@
+---
+- name: Configure an upstream remote and External definition
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    repository_name: testing
+    external_ref: app/org.example.App/x86_64/stable
+  tasks:
+    - name: Require the initial publication repository
+      mrmeee.flatman.flatman_repository_info:
+        name: "{{ repository_name }}"
+      register: source_repository
+
+    - name: Verify the repository exists
+      ansible.builtin.assert:
+        that: source_repository.repositories | length == 1
+        fail_msg: Create the source repository before configuring Externals
+
+    - name: Configure the upstream remote
+      mrmeee.flatman.flatman_resource:
+        resource: flatpak-remotes
+        match:
+          name: flathub
+        data:
+          url: https://dl.flathub.org/repo/
+          is_active: true
+          priority: 1
+      register: remote
+
+    - name: Configure the External app
+      mrmeee.flatman.flatman_resource:
+        resource: external-refs
+        match:
+          repository: "{{ source_repository.repositories[0].id }}"
+          ref: "{{ external_ref }}"
+        data:
+          remote: "{{ remote.resource.id }}"
+          display_name: Example App
+      register: external
+      # A predicted remote has no server ID until it has actually been created.
+      when: remote.resource.id is defined
+
+    - name: Report the definition result
+      ansible.builtin.debug:
+        var: external

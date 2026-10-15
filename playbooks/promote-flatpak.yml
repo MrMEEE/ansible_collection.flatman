@@ -1,0 +1,34 @@
+---
+- name: Promote an exact published Flatpak build
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+    target_repository: stable
+
+  tasks:
+    - name: Require a build history ID
+      ansible.builtin.assert:
+        that:
+          - build_id is defined
+          - build_id | int > 0
+        fail_msg: "Supply the build history ID (not package ID) with -e build_id=48"
+
+    - name: Promote the build and wait for completion
+      mrmeee.flatman.flatman_promotion:
+        build_id: "{{ build_id }}"
+        repository: "{{ target_repository }}"
+        wait: true
+        wait_timeout: 1800
+      register: release
+
+    - name: Show the promotion
+      ansible.builtin.debug:
+        var: release.promotion

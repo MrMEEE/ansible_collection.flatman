@@ -1,0 +1,35 @@
+---
+- name: Promote a published External version
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+    target_repository: stable
+
+  tasks:
+    - name: Require an existing External ref ID
+      ansible.builtin.assert:
+        that:
+          - external_ref_id is defined
+          - external_ref_id | int > 0
+        fail_msg: "Supply the existing External ID with -e external_ref_id=12"
+
+    - name: Promote the selected or latest published version
+      mrmeee.flatman.flatman_promotion:
+        external_ref_id: "{{ external_ref_id }}"
+        external_ref_version_id: "{{ external_ref_version_id | default(omit) }}"
+        repository: "{{ target_repository }}"
+        wait: true
+        wait_timeout: 1800
+      register: release
+
+    - name: Show the promotion
+      ansible.builtin.debug:
+        var: release.promotion

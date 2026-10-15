@@ -1,0 +1,36 @@
+---
+- name: Configure organisation-scoped access
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  tasks:
+    - name: Require an existing user ID
+      ansible.builtin.assert:
+        that:
+          - user_id is defined
+          - user_id | int > 0
+        fail_msg: Supply user_id from flatman_user_info
+
+    - name: Configure the organisation
+      mrmeee.flatman.flatman_resource:
+        resource: organisations
+        match:
+          name: Example Engineering
+        data:
+          description: Example release team
+          responsible_name: Release team
+          responsible_email: releases@example.com
+      register: organisation
+
+    - name: Assign an organisation-scoped role
+      mrmeee.flatman.flatman_resource:
+        resource: user-roles
+        match:
+          user: "{{ user_id | int }}"
+          organisation: "{{ organisation.resource.id }}"
+          role: view
+      when: organisation.resource.id is defined

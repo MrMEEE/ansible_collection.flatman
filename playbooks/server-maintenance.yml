@@ -1,0 +1,32 @@
+---
+- name: Inspect configuration and optionally queue maintenance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    run_cleanup: false
+  tasks:
+    - name: Read server configuration without displaying sensitive settings
+      mrmeee.flatman.flatman_resource_info:
+        resource: site-config
+      no_log: true
+      register: configuration
+
+    - name: Inspect the available workflow catalogue
+      mrmeee.flatman.flatman_resource_info:
+        resource: workflows
+      register: workflows
+
+    - name: Show the catalogue
+      ansible.builtin.debug:
+        var: workflows.resources
+
+    - name: Explicitly queue cleanup
+      mrmeee.flatman.flatman_workflow_action:
+        resource: site-config
+        action: cleanup
+      when: run_cleanup | bool

@@ -49,6 +49,15 @@ because the server has no "already done" concept:
 |---|---|
 | `flatman_package_action` with `start`, `cancel`, `commit`, `publish`, `build_ref` | Always reports `changed` when it runs. Guard with `when:` or run from a dedicated playbook. |
 | `flatman_quality_moderation` with `request-review` | Creates a new moderation request each time. |
+| `flatman_external_ref_action` with `pull` | Always queues a fresh pull and publication. Use for deliberate upstream refreshes, not recurring convergence. |
+| `flatman_workflow_action` | Imperative dispatch; read/report actions return unchanged. Never automatically retries or polls. |
+| `flatman_quality_moderation` with `reject-pending-reviews` | Bulk rejection reports changed when dispatched. |
+
+For `flatman_workflow_action`, GPG `renew` recalculates expiry from today and
+reports changed whenever dispatched; guard it with an explicit opt-in.
+LDAP `test-connection`/`test-search` and RPM `scan-spec-files`/`scan-branches`
+report unchanged on success. LDAP `ok: false` responses fail the task.
+Check mode sends no action requests, including these diagnostic/discovery calls.
 
 These are idempotent or partially idempotent:
 
@@ -60,6 +69,29 @@ These are idempotent or partially idempotent:
 | `flatman_moderation_review` | Skips when the request already carries the requested status. |
 | `flatman_app_pick` | Matches an existing selection by app, kind and date. |
 | `flatman_package_action` with `missing_objects` | Read-only, always `changed: false`. |
+| `flatman_external_ref_action` with `publish` | Skips an already-published ref; otherwise requires `pulled`. |
+| `flatman_promotion` | Reuses pending, promoting or promoted records for the same source, version and target. Queues again after failure. |
+
+`flatman_promotion` pins an External promotion to the supplied version ID or
+selects the latest published version by pull time and ID. Old-version records
+do not prevent promotion of a newer version. Flatpak promotions take a build
+history ID, not a package ID or build attempt number. Failed Flatpak promotions
+reuse the server's existing record; failed External promotions create a new one.
+
+With `wait: true`, promotion also waits for an existing in-progress record
+without reporting a change. It fails on a failed state or timeout and reports
+the server's error details. External pull/publish waits for `published`, not
+merely `pulled`. Both modules require positive `wait_timeout` and `wait_interval`.
+In check mode they read and validate existing resources without dispatching
+or polling. New promotion target eligibility is checked by the server only
+when actually dispatching.
+
+The expanded `flatman_resource` module compares only supplied readable fields
+and fails on ambiguous identities. Write-only fields (for example LDAP bind
+passwords) cause a write each time they are supplied. It rereads after writes
+to verify requested readable fields. Unlike older modules, explicit null
+values are reconciled for APIs supporting nullable fields. No diff is returned
+because payloads may contain credentials. See [expanded-api.md](expanded-api.md).
 
 ## Waiting for builds
 

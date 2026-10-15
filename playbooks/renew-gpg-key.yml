@@ -1,0 +1,30 @@
+---
+- name: Explicitly renew an existing signing key
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    do_renew: false
+    key_lifetime: 1y
+  tasks:
+    - name: Require an existing signing key and valid lifetime
+      ansible.builtin.assert:
+        that:
+          - gpg_key_id is defined
+          - gpg_key_id | int > 0
+          - key_lifetime | string in ['0', '1y', '2y', '5y', '10y']
+        fail_msg: Supply gpg_key_id and a supported key_lifetime
+
+    - name: Renew only when explicitly requested
+      mrmeee.flatman.flatman_workflow_action:
+        resource: gpg-keys
+        action: renew
+        id: "{{ gpg_key_id | int }}"
+        data:
+          key_lifetime: "{{ key_lifetime | string }}"
+      when: do_renew | bool
+      register: renewal

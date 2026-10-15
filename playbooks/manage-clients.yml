@@ -1,0 +1,38 @@
+---
+- name: Inspect clients and optionally assign organisations
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    assign_organisations: false
+  tasks:
+    - name: Read client inventory
+      mrmeee.flatman.flatman_resource_info:
+        resource: clients
+      register: clients
+
+    - name: Show client inventory
+      ansible.builtin.debug:
+        var: clients.resources
+
+    - name: Explicitly assign a client's organisations
+      when: assign_organisations | bool
+      block:
+        - name: Require a client and replacement organisation list
+          ansible.builtin.assert:
+            that:
+              - client_id is defined
+              - client_organisation_ids is defined
+            fail_msg: Supply client_id and client_organisation_ids before enabling assignment
+
+        - name: Replace client organisation assignments
+          mrmeee.flatman.flatman_workflow_action:
+            resource: clients
+            id: "{{ client_id }}"
+            action: assign-organisations
+            data:
+              organisations: "{{ client_organisation_ids }}"

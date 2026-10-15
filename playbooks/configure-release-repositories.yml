@@ -1,0 +1,38 @@
+---
+- name: Configure a testing to stable repository chain
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+
+  tasks:
+    - name: Generate the release signing key
+      mrmeee.flatman.flatman_gpg_key:
+        name: release-signing-key
+        email: release@example.com
+        state: generated
+
+    - name: Create the initial publication repository
+      mrmeee.flatman.flatman_repository:
+        name: testing
+        collection_id: org.example.Testing
+        description: Initial publication and validation
+        gpg_key: release-signing-key
+        is_active: true
+
+    - name: Configure stable as a promotion target after testing
+      mrmeee.flatman.flatman_repository:
+        name: stable
+        collection_id: org.example.Stable
+        description: Approved releases
+        gpg_key: release-signing-key
+        parent_repos:
+          - testing
+        is_active: true

@@ -1,0 +1,49 @@
+---
+- name: Configure and optionally build an RPM package
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ lookup('env', 'FLATMAN_URL') }}"
+      api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+  vars:
+    do_build: false
+  tasks:
+    - name: Require existing distribution IDs
+      ansible.builtin.assert:
+        that:
+          - distribution_ids is defined
+          - distribution_ids | length > 0
+        fail_msg: Supply distribution_ids from flatman_resource_info with resource rpm-distributions
+
+    - name: Configure the RPM package
+      mrmeee.flatman.flatman_resource:
+        resource: rpm-packages
+        match:
+          name: example-app
+        data:
+          git_repo_url: https://github.com/example/app-rpm.git
+          git_branch: main
+          spec_file: SPECS/example-app.spec
+          distributions: "{{ distribution_ids }}"
+          allow_internet_access: false
+          cleanup_on_success: true
+      register: rpm
+
+    - name: Explicitly queue RPM builds
+      mrmeee.flatman.flatman_workflow_action:
+        resource: rpm-packages
+        id: "{{ rpm.resource.id }}"
+        action: build
+      when:
+        - do_build | bool
+        - rpm.resource.id is defined
+
+    - name: Inspect existing RPM builds
+      mrmeee.flatman.flatman_resource_info:
+        resource: rpm-builds
+        match:
+          package: "{{ rpm.resource.id }}"
+      register: builds
+      when: rpm.resource.id is defined

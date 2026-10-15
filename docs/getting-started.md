@@ -87,6 +87,7 @@ does exactly that.
 
 - [Endpoint to module map](endpoint-map.md) — find the module for an API call
 - [Idempotency and check mode](idempotency.md) — what is safe to run repeatedly
-- [../playbooks/](../playbooks/) — runnable examples
+- [Example playbooks](../playbooks/README.md) — runnable examples, including
+  Flatpak and External publishing and cross-repository promotion
 - [../roles/repository/README.md](../roles/repository/README.md) — declarative
   repository provisioning without writing task lists

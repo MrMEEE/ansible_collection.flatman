@@ -1,6 +1,15 @@
 # Endpoint to module map
 
-Every documented endpoint of the flat-manager API and the module that wraps it.
+Core flat-manager API endpoints and the modules that wrap them.
+
+The [expanded API guide](expanded-api.md) maps additional router resources
+and workflow actions to `flatman_resource`, `flatman_resource_info` and
+`flatman_workflow_action`, including supported mutations and server limitations.
+
+Externals pull/publish and cross-repository promotion use token API
+endpoints. See the
+[publishing and promotion guide](../playbooks/README.md#externals-and-cross-repository-promotion)
+for runnable examples and server requirements.
 
 ## Core API (`/api/`)
 
@@ -26,6 +35,19 @@ Authenticated with an API token. Paths keep their trailing slash.
 | POST, PUT, DELETE | `/api/gpg-keys/` | `flatman_gpg_key` |
 | POST | `/api/gpg-keys/generate/` | `flatman_gpg_key` (`state: generated`) |
 | POST | `/api/gpg-keys/import_key/` | `flatman_gpg_key` (`state: imported`) |
+| POST | `/api/gpg-keys/{id}/renew/` | `flatman_workflow_action` (`resource: gpg-keys`, `action: renew`) |
+
+### LDAP diagnostics and RPM source discovery
+
+These routes require server release 1.0.34 or later and use JSON POST even for
+read-only diagnostics. See the [expanded API guide](expanded-api.md).
+
+| Method | Endpoint | Module |
+|---|---|---|
+| POST | `/api/ldap-sources/test-connection/` | `flatman_workflow_action` (`action: test-connection`) |
+| POST | `/api/ldap-sources/test-search/` | `flatman_workflow_action` (`action: test-search`) |
+| POST | `/api/rpm-packages/scan-spec-files/` | `flatman_workflow_action` (`action: scan-spec-files`) |
+| POST | `/api/rpm-packages/scan-branches/` | `flatman_workflow_action` (`action: scan-branches`) |
 
 ### Repositories
 
@@ -61,6 +83,18 @@ Authenticated with an API token. Paths keep their trailing slash.
 | GET | `/api/builds/{id}/logs/` | `flatman_build_log_info` (`build_id`) |
 | GET | `/api/artifacts/` | `flatman_artifact_info` |
 | POST, PUT, DELETE | `/api/artifacts/` | `flatman_artifact` |
+
+### Externals and promotion
+
+| Method | Endpoint | Module |
+|---|---|---|
+| GET | `/api/external-refs/`, `/api/external-refs/{id}/` | `flatman_external_ref_info` |
+| POST | `/api/external-refs/{id}/pull/` | `flatman_external_ref_action` (`action: pull`) |
+| POST | `/api/external-refs/{id}/publish/` | `flatman_external_ref_action` (`action: publish`) |
+| POST | `/api/builds/{id}/promote/` | `flatman_promotion` (`build_id`) |
+| POST | `/api/external-refs/{id}/promote/` | `flatman_promotion` (`external_ref_id`) |
+| GET | `/api/promotions/`, `/api/promotions/{id}/` | `flatman_promotion_info` (`kind: build`) |
+| GET | `/api/external-ref-promotions/`, `/api/external-ref-promotions/{id}/` | `flatman_promotion_info` (`kind: external`) |
 
 ### Repository tokens and utility
 
@@ -131,6 +165,7 @@ All handled by `flatman_collection_info`.
 | GET | `/api/v2/quality-moderation/{app_id}/status` | `flatman_quality_moderation_info` (`app_id`) |
 | POST | `/api/v2/quality-moderation/{app_id}/fullscreen` | `flatman_quality_moderation` (`action: fullscreen`) |
 | POST | `/api/v2/quality-moderation/{app_id}/request-review` | `flatman_quality_moderation` (`action: request-review`) |
+| DELETE | `/api/v2/quality-moderation/{app_id}/request-review` | `flatman_quality_moderation` (`action: reject-pending-reviews`) |
 
 ### Moderation requests
 
