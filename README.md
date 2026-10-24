@@ -3,7 +3,7 @@
 Ansible collection for [flat-manager-django](https://github.com/MrMEEE/flat-manager-django).
 
 It covers the core and expanded token API resources under `/api/` and the
-Flathub-compatible catalogue under `/api/v2/` with 43 modules and 3 roles.
+Flathub-compatible catalogue under `/api/v2/` with 45 modules and 3 roles.
 The modules talk HTTP from the controller, so there is nothing to install on the
 flat-manager server and no Python dependency beyond ansible-core itself.
 
@@ -100,11 +100,21 @@ choices, defaults, check-mode behavior, and notes; these pages are rendered by
 | [flatman_external_ref_action](plugins/modules/flatman_external_ref_action.py) | Pull (then publish) or publish an existing External definition; `state`/`action` and optional wait settings are documented in the module. |
 | [flatman_promotion](plugins/modules/flatman_promotion.py) | Promote a specific Flatpak build or External version to `target_repo_id`; the exact version is selected explicitly. |
 | [flatman_promotion_info](plugins/modules/flatman_promotion_info.py) | Poll build or External promotions by ID, source, version, target repository, and status. |
+| [flatman_promotion_ready_info](plugins/modules/flatman_promotion_ready_info.py) | List server-calculated ready build/External-to-repository candidates, optionally filtered by source, kind, or target. |
+| [flatman_promotion_batch](plugins/modules/flatman_promotion_batch.py) | Promote all ready candidates to one target or advance all sources through every currently eligible release-chain target. |
 
 These modules need the token workflow API and appropriate workflow and
 organisation permissions. External actions operate on existing definitions and
 configured remotes. Use [flatman_resource](plugins/modules/flatman_resource.py)
 to create/update/delete External definitions; see [expanded-api.md](docs/expanded-api.md).
+
+`flatman_promotion_ready_info` returns one candidate per ready source/target
+pair. `flatman_promotion_batch` supports `mode: target` with a repository name
+or ID, and `mode: all_ready` to promote every currently eligible pair. With
+`wait: true` (the default), it waits for each promotion and refreshes readiness
+so parent completion can unlock the next repository in the chain. With
+`wait: false`, it submits only the current snapshot; run it again after those
+jobs finish. In check mode it reports that snapshot without dispatching tasks.
 
 ### Expanded resources and workflows
 

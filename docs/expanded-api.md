@@ -211,6 +211,56 @@ read/report actions. It does not validate server-side prerequisites.
 Prefer existing dedicated External and promotion modules when you need
 idempotent publication/promotion or built-in waiting.
 
+## Promotion readiness and batch promotion
+
+The token API exposes the same server-side chain calculation used by the
+promotion UI:
+
+| Method and endpoint | Result |
+|---|---|
+| `GET /api/promotions/available/` | One entry per published Flatpak build and currently eligible target repository. |
+| `GET /api/external-ref-promotions/available/` | One entry per published External version and currently eligible target repository. |
+
+Both endpoints require the user's `published_builds:promotion` permission (or
+the corresponding legacy build/External promotion grant) and organisation
+access to the source. Responses are paginated and include the IDs together
+with source and target names. Existing pending, promoting, or promoted
+records are excluded; failed records may be retried. External eligibility is
+calculated per immutable version, so old promotion history does not block a
+new commit.
+
+`flatman_promotion_ready_info` reads either endpoint and combines the results.
+Use `kind: build|external|both`, and optionally filter by `build_id`,
+`external_ref_id`, `external_ref_version_id`, or target `repository`/
+`target_repo_id`.
+
+`flatman_promotion_batch` submits one promotion for each matching candidate:
+
+| Mode | Behavior |
+|---|---|
+| `target` | Requires `repository` or `target_repo_id`; promotes every source currently eligible for that one target. |
+| `all_ready` | Promotes to all targets currently returned by the readiness endpoints. |
+
+With the default `wait: true`, it waits for the current round to finish, then
+queries readiness again. This allows a successful parent promotion to unlock
+its child target in a later round. It stops when there are no candidates left
+or `max_promotions` is reached. With `wait: false`, only the initial snapshot
+is dispatched; rerun after those jobs finish to continue down a chain.
+
+Check mode returns the currently eligible plan and makes no writes. It cannot
+predict targets that future successful promotions might unlock. Eligibility
+is a snapshot; a concurrent actor can change it before dispatch, in which case
+the module fails and reports promotions already submitted. Use this preview:
+
+```yaml
+- name: Preview all currently eligible promotion pairs
+  mrmeee.flatman.flatman_promotion_batch:
+    mode: all_ready
+    kind: both
+  check_mode: true
+  register: promotion_plan
+```
+
 ### Signing-key renewal and diagnostic/discovery examples
 
 - [renew-gpg-key.yml](../playbooks/renew-gpg-key.yml) requires `gpg_key_id` and

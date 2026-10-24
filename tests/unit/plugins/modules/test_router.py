@@ -220,7 +220,8 @@ class RouterTests(unittest.TestCase):
         client.get_all = get_externals
         client.get_or_none = get_external
         result = client.add_display_names({
-            'id': 5, 'external_ref': 2, 'external_ref_version': 8, 'target_repo': 10,
+            'id': 5, 'external_ref': 2, 'external_ref_version': 8,
+            'target_repo': {'id': 10, 'name': 'stable'},
         })
         self.assertEqual(result['external_ref_name'], 'Example Runtime')
         self.assertEqual(result['external_ref_version_name'], 'runtime/org.example.Platform/x86_64/stable')
@@ -259,24 +260,6 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(result['package_name'], 'Example App')
         self.assertEqual(result['package_identifier'], 'org.example.App')
         self.assertEqual(result['target_repo_name'], 'stable')
-
-    def test_external_version_output_names_external_and_commit(self):
-        client = object.__new__(flatman.FlatManagerClient)
-        client._display_cache = {}
-        client.get_all = lambda path, params=None: [{
-            'id': 2, 'display_name': 'Example Runtime',
-            'versions': [{'id': 8, 'ref': 'runtime/org.example.Platform/x86_64/stable',
-                          'commit_hash': 'abcdef0123456789'}],
-        }]
-
-        result = client.add_display_names({
-            'external_ref': 2, 'external_ref_version': 8, 'target_repo': {'id': 10, 'name': 'stable'},
-        })
-
-        self.assertEqual(result['external_ref_name'], 'Example Runtime')
-        self.assertEqual(result['external_ref_version_name'], 'runtime/org.example.Platform/x86_64/stable')
-        self.assertEqual(result['external_ref_version_commit_hash'], 'abcdef0123456789')
-        self.assertEqual(result['target_repo'], {'id': 10, 'name': 'stable', 'display_name': 'stable'})
 
     def test_every_supported_resource_create_and_check(self):
         for resource, operations in router.RESOURCE_OPERATIONS.items():

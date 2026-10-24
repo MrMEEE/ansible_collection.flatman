@@ -148,6 +148,55 @@ with `kind: build` (the default) or `kind: external` to query promotion status.
 All three examples support `--check` without queueing tasks. In check mode,
 new promotion target eligibility is not validated by the server.
 
+### Batch promotion
+
+Use `flatman_promotion_ready_info` to inspect all source/target pairs the server
+currently considers eligible. Records include source IDs and readable names,
+the exact External version where applicable, and target repository IDs/names:
+
+```yaml
+- name: List every currently eligible promotion
+  mrmeee.flatman.flatman_promotion_ready_info:
+    kind: both
+  register: ready
+
+- name: Review promotion candidates
+  ansible.builtin.debug:
+    var: ready.ready_promotions
+```
+
+To send every currently eligible Flatpak and External item to one repository:
+
+```yaml
+- name: Promote all eligible content to stable
+  mrmeee.flatman.flatman_promotion_batch:
+    mode: target
+    kind: both
+    repository: stable
+    wait: true
+```
+
+To advance all eligible items through the release chain, use
+`mode: all_ready`. With `wait: true` (the default), the module waits for the
+current round to finish, refreshes readiness, and then processes repositories
+unlocked by the completed promotions. In `--check` mode it reports only the
+current snapshot; future stages cannot be predicted. With `wait: false`, only
+the current snapshot is submitted, so run the play again after those promotions
+complete. `max_promotions` bounds each invocation (default 500).
+
+```yaml
+- name: Promote all Flatpak and External releases through the chain
+  mrmeee.flatman.flatman_promotion_batch:
+    mode: all_ready
+    kind: both
+    wait: true
+    wait_timeout: 1800
+```
+
+The server remains the authority on eligibility. If another actor changes
+promotion state after discovery, dispatch may be rejected; the task reports
+already-dispatched promotions in its failure result.
+
 Setting a package's `status: published` only edits a state
 field; changing its `repository` or `branch` only edits configuration.
 Neither performs the actual content-copying, signing or promotion workflow.

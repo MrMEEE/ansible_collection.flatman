@@ -22,6 +22,8 @@ plugins/modules/flatman_package_info.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_platform_info.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_promotion.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_promotion_info.py validate-modules:missing-gplv3-license
+plugins/modules/flatman_promotion_ready_info.py validate-modules:missing-gplv3-license
+plugins/modules/flatman_promotion_batch.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_quality_moderation.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_quality_moderation_info.py validate-modules:missing-gplv3-license
 plugins/modules/flatman_repository.py validate-modules:missing-gplv3-license

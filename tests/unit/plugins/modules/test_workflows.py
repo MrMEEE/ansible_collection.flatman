@@ -11,7 +11,9 @@ from ansible_collections.mrmeee.flatman.plugins.modules import (
     flatman_external_ref_action,
     flatman_external_ref_info,
     flatman_promotion,
+    flatman_promotion_batch,
     flatman_promotion_info,
+    flatman_promotion_ready_info,
 )
 
 
@@ -163,6 +165,128 @@ class WorkflowTests(unittest.TestCase):
             '/api/builds/48/promote/', data=dict(target_repo_id=3), expect=(202,))
         self.client.wait_for.assert_called_once_with(
             '/api/promotions/10/', 'status', ['promoted'], fail_values=['failed'], timeout=600, interval=5)
+
+    def test_ready_info_combines_kinds_and_filters_target(self):
+        build = dict(kind='build', build_id=48, target_repo_id=3, package_name='Example App')
+        external = dict(kind='external', external_ref_id=12, external_ref_version_id=8,
+                        target_repo_id=4, external_ref_name='Example Runtime')
+        self.client.get_all.side_effect = [[build], [external]]
+        result = self.run_module(flatman_promotion_ready_info, dict(kind='both', target_repo_id=3))
+        self.assertFalse(result['changed'])
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['ready_promotions'], [build])
+        self.client.get_all.assert_any_call('/api/promotions/available/')
+        self.client.get_all.assert_any_call('/api/external-ref-promotions/available/')
+
+    def test_batch_target_mode_dispatches_only_the_selected_repository(self):
+        candidate = dict(kind='build', build_id=48, target_repo_id=3, package_name='Example App')
+        self.client.get_all.return_value = [candidate]
+        self.client.resolve.return_value = dict(id=3)
+        self.client.post.return_value = dict(promotion_id=10)
+        self.client.get.return_value = dict(id=10, status='promoted')
+        result = self.run_module(flatman_promotion_batch, dict(
+            mode='target', kind='build', repository='stable'))
+        self.assertTrue(result['changed'])
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['promotions'][0]['target_repo_id'], 3)
+        self.client.post.assert_called_once_with(
+            '/api/builds/48/promote/', data=dict(target_repo_id=3), expect=(202,))
+
+    def test_all_ready_waits_and_refreshes_for_new_chain_targets(self):
+        testing = dict(kind='build', build_id=48, target_repo_id=3, target_repo_name='testing')
+        stable = dict(kind='build', build_id=48, target_repo_id=4, target_repo_name='stable')
+        self.client.get_all.side_effect = [[testing], [stable], [], []]
+        self.client.post.side_effect = [dict(promotion_id=10), dict(promotion_id=11)]
+        self.client.get.side_effect = [dict(id=10, status='pending'), dict(id=11, status='pending')]
+        self.client.wait_for.side_effect = [dict(id=10, status='promoted'), dict(id=11, status='promoted')]
+        result = self.run_module(flatman_promotion_batch, dict(mode='all_ready', kind='build'))
+        self.assertTrue(result['changed'])
+        self.assertEqual([item['target_repo_id'] for item in result['promotions']], [3, 4])
+        self.assertEqual(self.client.post.call_count, 2)
+        self.assertEqual(self.client.wait_for.call_count, 2)
+
+    def test_batch_check_mode_only_plans_current_candidates(self):
+        candidate = dict(kind='external', external_ref_id=12, external_ref_version_id=8,
+                         target_repo_id=3, external_ref_name='Example Runtime')
+        self.client.get_all.side_effect = [[], [candidate]]
+        result = self.run_module(flatman_promotion_batch, dict(mode='all_ready'), check=True)
+        self.assertTrue(result['changed'])
+        self.assertEqual(result['planned_promotions'], [candidate])
+        self.client.post.assert_not_called()
+        self.client.wait_for.assert_not_called()
+
+    def test_batch_target_and_limit_validation(self):
+        for params in (
+            dict(mode='target'), dict(mode='all_ready', max_promotions=0),
+            dict(mode='all_ready', wait_interval=0),
+        ):
+            with self.subTest(params=params):
+                self.run_module(flatman_promotion_batch, params, failed=True)
+        self.client.get_all.assert_not_called()
+        self.client.post.assert_not_called()
+
+    def test_promotion_ready_info_combines_and_filters_candidates(self):
+        build = dict(kind='build', build_id=48, target_repo_id=3, package_name='App')
+        external = dict(kind='external', external_ref_id=12, external_ref_version_id=8,
+                        target_repo_id=4, external_ref_name='Runtime')
+        self.client.get_all.side_effect = [[build], [external]]
+        self.client.resolve.return_value = dict(id=3)
+        result = self.run_module(flatman_promotion_ready_info, dict(
+            repository='testing', kind='both'))
+        self.assertFalse(result['changed'])
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['ready_promotions'], [build])
+        self.assertEqual(self.client.get_all.call_count, 2)
+
+    def test_promotion_batch_targets_one_repository(self):
+        candidate = dict(kind='build', build_id=48, target_repo_id=3, package_name='App')
+        self.client.get_all.return_value = [candidate]
+        self.client.resolve.return_value = dict(id=3)
+        self.client.post.return_value = dict(promotion_id=10)
+        self.client.get.return_value = dict(id=10, status='pending')
+        result = self.run_module(flatman_promotion_batch, dict(
+            repository='testing', mode='target', kind='build', wait=False))
+        self.assertTrue(result['changed'])
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['promotions'][0]['promotion_id'], 10)
+        self.client.post.assert_called_once_with(
+            '/api/builds/48/promote/', data=dict(target_repo_id=3), expect=(202,))
+
+    def test_all_ready_batch_waits_and_discovers_new_chain_stage(self):
+        first = dict(kind='build', build_id=48, target_repo_id=3, target_repo_name='testing')
+        second = dict(kind='build', build_id=48, target_repo_id=4, target_repo_name='stable')
+        self.client.get_all.side_effect = [[first], [second], [], []]
+        self.client.post.side_effect = [dict(promotion_id=10), dict(promotion_id=11)]
+        self.client.get.side_effect = [dict(id=10, status='pending'), dict(id=11, status='pending')]
+        self.client.wait_for.side_effect = [dict(id=10, status='promoted'), dict(id=11, status='promoted')]
+        result = self.run_module(flatman_promotion_batch, dict(
+            mode='all_ready', kind='build', wait=True))
+        self.assertTrue(result['changed'])
+        self.assertEqual(result['count'], 2)
+        self.assertEqual([item['target_repo_id'] for item in result['promotions']], [3, 4])
+        self.assertEqual(self.client.get_all.call_count, 4)
+        self.assertEqual(self.client.post.call_count, 2)
+
+    def test_promotion_batch_check_mode_only_reports_current_candidates(self):
+        candidate = dict(kind='external', external_ref_id=12, external_ref_version_id=8,
+                         target_repo_id=3, external_ref_name='Runtime')
+        self.client.get_all.side_effect = [[], [candidate]]
+        result = self.run_module(flatman_promotion_batch, dict(mode='all_ready'), check=True)
+        self.assertTrue(result['changed'])
+        self.assertEqual(result['planned_promotions'], [candidate])
+        self.client.post.assert_not_called()
+        self.client.wait_for.assert_not_called()
+
+    def test_target_batch_requires_target_and_positive_limits(self):
+        for params in (
+            dict(mode='target'),
+            dict(mode='all_ready', max_promotions=0),
+            dict(mode='all_ready', wait_timeout=0),
+        ):
+            with self.subTest(params=params):
+                self.run_module(flatman_promotion_batch, params, failed=True)
+        self.client.get_all.assert_not_called()
+        self.client.post.assert_not_called()
 
     def test_build_promotion_reuses_active_and_completed(self):
         self.client.get.return_value = dict(id=48, status='published')
