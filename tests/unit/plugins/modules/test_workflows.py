@@ -29,9 +29,14 @@ def fail_json(self, **kwargs):
     raise ModuleResult(True, kwargs)
 
 
+def unchanged_display_names(value, resource=None):
+    return value
+
+
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.client = MagicMock()
+        self.client.add_display_names.side_effect = unchanged_display_names
         self.external = dict(
             id=12, status='published', remote=1,
             versions=[

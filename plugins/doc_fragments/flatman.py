@@ -35,6 +35,12 @@ options:
       - Socket timeout in seconds for each individual HTTP request.
     type: int
     default: 30
+  include_names:
+    description:
+      - Add best-effort human-readable companion fields for related resource IDs in returned records.
+      - Original numeric IDs are retained. Set to C(false) to skip the extra lookup requests.
+    type: bool
+    default: true
   client_cert:
     description:
       - Path to a PEM formatted client certificate used for mutual TLS.

@@ -29,10 +29,15 @@ def fail_json(self, **kwargs):
     raise ModuleResult(True, kwargs)
 
 
+def unchanged_display_names(value, resource=None):
+    return value
+
+
 class RouterTests(unittest.TestCase):
     def setUp(self):
         self.client = MagicMock()
         self.client.diff_fields.side_effect = flatman.FlatManagerClient.diff_fields
+        self.client.add_display_names.side_effect = unchanged_display_names
         self.client.get_all.return_value = []
 
     def run_module(self, module, params, failed=False, check=False):
@@ -166,6 +171,112 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(result['resources'], [])
         self.client.get_or_none.assert_called_once_with('/api/clients/12/')
         self.run_module(flatman_resource_info, dict(resource='workflows', id=1), failed=True)
+
+    def test_output_names_keep_numeric_ids_and_enrich_promotion_records(self):
+        client = object.__new__(flatman.FlatManagerClient)
+        client._display_cache = {}
+        records = {
+            '/api/builds/19/': {
+                'id': 19, 'build_number': 7, 'status': 'published',
+                'package_name': 'Example App', 'package_package_id': 'org.example.App',
+                'repository_name': 'testing',
+            },
+            '/api/packages/3/': {
+                'id': 3, 'package_id': 'org.example.App', 'package_name': 'Example App',
+            },
+            '/api/repositories/10/': {'id': 10, 'name': 'stable'},
+        }
+
+        def get_record(path):
+            return records.get(path)
+
+        client.get_or_none = get_record
+        promotion = {
+            'id': 4, 'build': 19, 'package': 3, 'target_repo': 10, 'status': 'promoted',
+        }
+
+        result = client.add_display_names({'changed': False, 'promotions': [promotion]})
+        enriched = result['promotions'][0]
+        self.assertEqual((enriched['build'], enriched['package'], enriched['target_repo']), (19, 3, 10))
+        self.assertEqual(enriched['build_name'], 'Build 7 - Example App')
+        self.assertEqual(enriched['package_name'], 'Example App')
+        self.assertEqual(enriched['package_identifier'], 'org.example.App')
+        self.assertEqual(enriched['target_repo_name'], 'stable')
+
+    def test_external_version_gets_parent_external_name(self):
+        client = object.__new__(flatman.FlatManagerClient)
+        client._display_cache = {}
+
+        def get_externals(path, params=None):
+            return [{
+                'id': 2, 'display_name': 'Example Runtime',
+                'versions': [{'id': 8, 'ref': 'runtime/org.example.Platform/x86_64/stable',
+                              'commit_hash': 'abcdef0123456789'}],
+            }]
+
+        def get_external(path, params=None):
+            return {'id': 2, 'display_name': 'Example Runtime'} if path == '/api/external-refs/2/' else None
+
+        client.get_all = get_externals
+        client.get_or_none = get_external
+        result = client.add_display_names({
+            'id': 5, 'external_ref': 2, 'external_ref_version': 8, 'target_repo': 10,
+        })
+        self.assertEqual(result['external_ref_name'], 'Example Runtime')
+        self.assertEqual(result['external_ref_version_name'], 'runtime/org.example.Platform/x86_64/stable')
+        self.assertEqual(result['external_ref_version_commit_hash'], 'abcdef0123456789')
+
+    def test_related_name_option_is_shared_and_enabled_by_default(self):
+        self.assertIn('include_names', flatman.flatman_argument_spec())
+        self.assertTrue(flatman.flatman_argument_spec()['include_names']['default'])
+
+    def test_display_names_add_friendly_labels_without_replacing_ids(self):
+        client = object.__new__(flatman.FlatManagerClient)
+        client._display_cache = {}
+        records = {
+            '/api/builds/19/': {
+                'id': 19, 'build_number': 7, 'status': 'published',
+                'package_name': 'Example App', 'package_package_id': 'org.example.App',
+                'repository_name': 'testing',
+            },
+            '/api/packages/3/': {
+                'id': 3, 'package_id': 'org.example.App', 'package_name': 'Example App',
+            },
+            '/api/repositories/10/': {'id': 10, 'name': 'stable'},
+        }
+
+        def get_record(path):
+            return records.get(path)
+
+        client.get_or_none = get_record
+
+        result = client.add_display_names({
+            'promotions': [{'build': 19, 'package': 3, 'target_repo': 10, 'status': 'promoted'}],
+        })['promotions'][0]
+
+        self.assertEqual((result['build'], result['package'], result['target_repo']), (19, 3, 10))
+        self.assertEqual(result['build_name'], 'Build 7 - Example App')
+        self.assertEqual(result['package_name'], 'Example App')
+        self.assertEqual(result['package_identifier'], 'org.example.App')
+        self.assertEqual(result['target_repo_name'], 'stable')
+
+    def test_external_version_output_names_external_and_commit(self):
+        client = object.__new__(flatman.FlatManagerClient)
+        client._display_cache = {}
+        client.get_all = lambda path, params=None: [{
+            'id': 2, 'display_name': 'Example Runtime',
+            'versions': [{'id': 8, 'ref': 'runtime/org.example.Platform/x86_64/stable',
+                          'commit_hash': 'abcdef0123456789'}],
+        }]
+
+        result = client.add_display_names({
+            'external_ref': 2, 'external_ref_version': 8, 'target_repo': {'id': 10, 'name': 'stable'},
+        })
+
+        self.assertEqual(result['external_ref_name'], 'Example Runtime')
+        self.assertEqual(result['external_ref_version_name'], 'runtime/org.example.Platform/x86_64/stable')
+        self.assertEqual(result['external_ref_version_commit_hash'], 'abcdef0123456789')
+        self.assertEqual(result['target_repo'], {'id': 10, 'name': 'stable', 'display_name': 'stable'})
 
     def test_every_supported_resource_create_and_check(self):
         for resource, operations in router.RESOURCE_OPERATIONS.items():

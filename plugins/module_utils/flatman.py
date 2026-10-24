@@ -36,6 +36,10 @@ def flatman_argument_spec():
         timeout=dict(type='int', default=30),
         client_cert=dict(type='path'),
         client_key=dict(type='path', no_log=False),
+        include_names=dict(
+            type='bool',
+            default=True,
+        ),
     )
 
 
@@ -71,6 +75,157 @@ class FlatManagerClient(object):
 
         self.changed = False
         self.diff = {}
+        self._display_cache = {}
+
+    def _display_route(self, relation, resource=None):
+        if relation in ('repository', 'target_repo', 'parent_repos', 'child_repos'):
+            return 'repositories'
+        if relation in ('gpg_key', 'signing_key'):
+            return 'gpg-keys'
+        if relation == 'remote':
+            return 'flatpak-remotes'
+        if relation == 'external_ref':
+            return 'external-refs'
+        if relation == 'external_ref_version':
+            return 'external-ref-versions'
+        if relation in ('user', 'users', 'created_by', 'promoted_by', 'reviewed_by'):
+            return 'users'
+        if relation in ('organisation', 'organisations'):
+            return 'organisations'
+        if relation == 'group':
+            return 'permission-groups'
+        if relation == 'source':
+            return 'ldap-sources' if resource == 'ldap-group-mappings' else 'bst-sources'
+        if relation == 'bst_source':
+            return 'bst-sources'
+        if relation == 'server':
+            return 'satellite-servers'
+        if relation in ('distribution', 'distributions'):
+            return 'rpm-distributions'
+        if relation in ('default_repos', 'selected_repos'):
+            return 'rpm-repositories'
+        if relation == 'build':
+            return 'rpm-builds' if resource == 'rpm-builds' else 'builds'
+        if relation == 'package':
+            return 'rpm-packages' if resource and resource.startswith('rpm-') else 'packages'
+        return None
+
+    @staticmethod
+    def _display_label(record):
+        for field in ('display_name', 'package_name', 'name', 'hostname', 'username', 'ref', 'filename', 'role', 'key_id'):
+            value = record.get(field)
+            if value not in (None, ''):
+                return str(value)
+        return None
+
+    def _display_record(self, route, identifier):
+        if isinstance(identifier, dict):
+            return identifier
+        if identifier is None or isinstance(identifier, bool):
+            return None
+        cache_key = (route, str(identifier))
+        if cache_key not in self._display_cache:
+            try:
+                if route == 'external-ref-versions':
+                    match = None
+                    for external_ref in self.get_all('/api/external-refs/'):
+                        for version in external_ref.get('versions') or []:
+                            if str(version.get('id')) == str(identifier):
+                                match = dict(version)
+                                match['external_ref_name'] = external_ref.get('display_name') or external_ref.get('ref')
+                                self._display_cache[('external-refs', str(external_ref['id']))] = external_ref
+                                break
+                        if match:
+                            break
+                    self._display_cache[cache_key] = match
+                else:
+                    self._display_cache[cache_key] = self.get_or_none(
+                        '/api/%s/%s/' % (route, identifier)
+                    )
+            except FlatManagerError:
+                self._display_cache[cache_key] = None
+        return self._display_cache[cache_key]
+
+    def add_display_names(self, value, resource=None, _seen=None):
+        """Add best-effort `*_name` companions while retaining every source ID."""
+        if _seen is None:
+            _seen = set()
+        if isinstance(value, list):
+            return [self.add_display_names(item, resource=resource, _seen=_seen) for item in value]
+        if not isinstance(value, dict):
+            return value
+
+        current_resource = value.get('resource', resource)
+        identity = (current_resource, str(value.get('id'))) if value.get('id') is not None else None
+        if identity is not None and identity in _seen:
+            return dict(value)
+        if identity is not None:
+            _seen.add(identity)
+        result = dict((key, self.add_display_names(item, resource=current_resource, _seen=_seen))
+                      for key, item in value.items())
+        label = self._display_label(result)
+        if label:
+            result.setdefault('display_name', label)
+
+        for relation, related_ids in list(result.items()):
+            route = self._display_route(relation, current_resource)
+            if route is None or relation.endswith('_name') or relation.endswith('_names'):
+                continue
+            is_many = isinstance(related_ids, list)
+            identifiers = related_ids if is_many else [related_ids]
+            labels = []
+            enriched_records = []
+            for identifier in identifiers:
+                related = self._display_record(route, identifier)
+                if related is None:
+                    continue
+                related = self.add_display_names(related, resource=route, _seen=_seen)
+                related_label = self._display_label(related)
+                if related_label:
+                    labels.append(related_label)
+                if is_many:
+                    enriched_records.append(related)
+                else:
+                    for key in ('name', 'package_id', 'package_name', 'build_number', 'version', 'ref', 'commit_hash'):
+                        if key in related:
+                            alias = '%s_%s' % (relation, 'identifier' if key == 'package_id' else key)
+                            result.setdefault(alias, related[key])
+                    result.setdefault('%s_details' % relation, related)
+                    if relation == 'build':
+                        build_number = related.get('build_number')
+                        build_label = 'Build %s' % build_number if build_number is not None else 'Build %s' % identifier
+                        if related.get('package_name'):
+                            build_label = '%s - %s' % (build_label, related['package_name'])
+                        result.setdefault('build_name', build_label)
+                        for key, alias in (
+                            ('build_number', 'build_number'), ('status', 'build_status'),
+                            ('package_name', 'package_name'), ('package_package_id', 'package_identifier'),
+                            ('repository_name', 'repository_name'),
+                        ):
+                            if related.get(key) is not None:
+                                result.setdefault(alias, related[key])
+                    elif relation == 'package':
+                        if related.get('package_name'):
+                            result.setdefault('package_name', related['package_name'])
+                        if related.get('package_id'):
+                            result.setdefault('package_identifier', related['package_id'])
+            if labels:
+                if is_many:
+                    key = {
+                        'organisations': 'organisation_names',
+                        'parent_repos': 'parent_repo_names',
+                        'child_repos': 'child_repo_names',
+                        'default_repos': 'default_repo_names',
+                        'selected_repos': 'selected_repo_names',
+                        'distributions': 'distribution_names',
+                    }.get(relation, '%s_names' % relation.rstrip('s'))
+                    result.setdefault(key, labels)
+                    if enriched_records:
+                        result.setdefault('%s_details' % relation, enriched_records)
+                else:
+                    result.setdefault('%s_name' % relation, labels[0])
+
+        return result
 
     # ------------------------------------------------------------------
     # low level
@@ -358,6 +513,16 @@ def _parse_body(raw):
 def run_module(module, handler):
     """Execute ``handler(client)`` translating FlatManagerError into fail_json."""
     client = FlatManagerClient(module)
+    original_exit_json = module.exit_json
+
+    def exit_json_with_names(**kwargs):
+        if module.params.get('include_names', True):
+            resource = module.params.get('resource')
+            kwargs = dict((key, client.add_display_names(value, resource=resource))
+                          for key, value in kwargs.items())
+        original_exit_json(**kwargs)
+
+    module.exit_json = exit_json_with_names
     try:
         handler(client)
     except FlatManagerError as exc:
