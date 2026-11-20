@@ -1,4 +1,9 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   build_id: Required published build-history ID (not package ID).
+#   target_repository: Destination repository; defaults to stable.
 - name: Promote an exact published Flatpak build
   hosts: localhost
   connection: local

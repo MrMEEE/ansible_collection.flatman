@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   external_ref_id: Required numeric ID of the External definition.
+#   external_ref_version_id: Optional exact published version ID; omit to select the latest published version.
+#   target_repository: Destination repository; defaults to stable.
 - name: Promote a published External version
   hosts: localhost
   connection: local

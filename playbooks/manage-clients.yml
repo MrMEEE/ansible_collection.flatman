@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   assign_organisations: Set to true to replace a client's organisation assignments; defaults to false.
+#   client_id: Required client ID when assign_organisations is true.
+#   client_organisation_ids: Required list of replacement organisation IDs when assigning.
 - name: Inspect clients and optionally assign organisations
   hosts: localhost
   connection: local

@@ -1,4 +1,9 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   external_ref_id: Required numeric ID of the configured External ref.
+#   external_action: pull to fetch and publish, or publish an existing pull; defaults to publish.
 - name: Publish an existing External app
   hosts: localhost
   connection: local

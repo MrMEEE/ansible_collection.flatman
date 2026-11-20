@@ -12,6 +12,7 @@ flat-manager server and no Python dependency beyond ansible-core itself.
 - [Endpoint to module map](docs/endpoint-map.md)
 - [Idempotency and check mode](docs/idempotency.md)
 - [Expanded API resources and workflows](docs/expanded-api.md)
+- [Complete module reference](docs/module-reference.md)
 - [Example playbooks](playbooks/README.md)
 
 ## Requirements
@@ -100,8 +101,8 @@ choices, defaults, check-mode behavior, and notes; these pages are rendered by
 | [flatman_external_ref_action](plugins/modules/flatman_external_ref_action.py) | Pull (then publish) or publish an existing External definition; `state`/`action` and optional wait settings are documented in the module. |
 | [flatman_promotion](plugins/modules/flatman_promotion.py) | Promote a specific Flatpak build or External version to `target_repo_id`; the exact version is selected explicitly. |
 | [flatman_promotion_info](plugins/modules/flatman_promotion_info.py) | Poll build or External promotions by ID, source, version, target repository, and status. |
-| [flatman_promotion_ready_info](plugins/modules/flatman_promotion_ready_info.py) | List server-calculated ready build/External-to-repository candidates, optionally filtered by source, kind, or target. |
-| [flatman_promotion_batch](plugins/modules/flatman_promotion_batch.py) | Promote all ready candidates to one target or advance all sources through every currently eligible release-chain target. |
+| [flatman_promotion_ready_info](plugins/modules/flatman_promotion_ready_info.py) | List server-calculated ready build/External-to-repository candidates, optionally filtered by source repository, item, kind, or target. |
+| [flatman_promotion_batch](plugins/modules/flatman_promotion_batch.py) | Promote ready candidates from an optional source repository to one target or advance them through every currently eligible release-chain target. |
 
 These modules need the token workflow API and appropriate workflow and
 organisation permissions. External actions operate on existing definitions and
@@ -110,7 +111,8 @@ to create/update/delete External definitions; see [expanded-api.md](docs/expande
 
 `flatman_promotion_ready_info` returns one candidate per ready source/target
 pair. `flatman_promotion_batch` supports `mode: target` with a repository name
-or ID, and `mode: all_ready` to promote every currently eligible pair. With
+or ID, optionally restricted to a source repository name or ID, and
+`mode: all_ready` to promote every currently eligible pair. With
 `wait: true` (the default), it waits for each promotion and refreshes readiness
 so parent completion can unlock the next repository in the chain. With
 `wait: false`, it submits only the current snapshot; run it again after those
@@ -240,6 +242,12 @@ Every module carries full `ansible-doc` documentation:
 ```bash
 ansible-doc mrmeee.flatman.flatman_repository
 ```
+
+The [complete module reference](docs/module-reference.md) is a generated
+snapshot of every module's `ansible-doc` output. Regenerate it after changing
+module documentation with `bash docs/generate-module-reference.sh`. The role
+guides are [curation](roles/curation/README.md), [package](roles/package/README.md),
+and [repository](roles/repository/README.md).
 
 ## Testing
 

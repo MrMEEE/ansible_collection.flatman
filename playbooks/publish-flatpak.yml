@@ -1,4 +1,9 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   app_id: Required ID of the existing Flatpak package to publish.
+# This playbook commits/publishes an already-built package; it does not start a build.
 - name: Publish an existing Flatpak build in its configured repository
   hosts: localhost
   connection: local

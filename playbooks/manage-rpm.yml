@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   distribution_ids: Required non-empty list of existing RPM distribution IDs.
+#   do_build: Set to true to queue an RPM build; defaults to false.
+# Package name, Git source and spec path are example configuration values.
 - name: Configure and optionally build an RPM package
   hosts: localhost
   connection: local

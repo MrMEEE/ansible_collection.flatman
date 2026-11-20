@@ -1,4 +1,8 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+# No extra variables are required; this example creates stable and beta repositories.
 - name: Provision flat-manager repositories
   hosts: localhost
   gather_facts: false

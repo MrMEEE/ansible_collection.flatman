@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   app_id: Flatpak application ID; defaults to org.example.App.
+#   app_git_url: Application source Git URL; defaults to the example repository.
+#   do_build: Set to true to build, commit and publish; defaults to false (config only).
 - name: Declare and build a Flatpak package
   hosts: localhost
   gather_facts: false

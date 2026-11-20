@@ -1,4 +1,8 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+# No additional variables are required; the playbook reports current server data.
 - name: Report on a flat-manager instance
   hosts: localhost
   gather_facts: false

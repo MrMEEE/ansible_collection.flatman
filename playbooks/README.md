@@ -25,6 +25,7 @@ the release chain; it is not a package configuration change.
 | Pull/publish an app managed under **Externals** | [publish-external.yml](publish-external.yml) |
 | Promote a published Flatpak build to another repository | [promote-flatpak.yml](promote-flatpak.yml) |
 | Promote a published External ref version to another repository | [promote-external.yml](promote-external.yml) |
+| Promote all eligible Flatpak builds and External versions between repositories | [promote-repository-content.yml](promote-repository-content.yml) |
 
 ### Publish a Flatpak
 
@@ -148,6 +149,19 @@ with `kind: build` (the default) or `kind: external` to query promotion status.
 All three examples support `--check` without queueing tasks. In check mode,
 new promotion target eligibility is not validated by the server.
 
+To promote all currently eligible content from one repository to another,
+including both Flatpak builds and External versions, run:
+
+```bash
+ansible-playbook playbooks/promote-repository-content.yml \
+  -e from_repository=testing -e to_repository=stable
+```
+
+The playbook submits only candidates the server currently considers eligible
+for that direct source/destination pair, then waits for each promotion to
+complete. It does not promote through intermediate repositories. Use
+`--check` to preview the current eligible set without submitting promotions.
+
 ### Batch promotion
 
 Use `flatman_promotion_ready_info` to inspect all source/target pairs the server
@@ -175,6 +189,12 @@ To send every currently eligible Flatpak and External item to one repository:
     repository: stable
     wait: true
 ```
+
+The batch module can also filter candidates by their source repository with
+`source_repository` (or `source_repo_id`), independently of the destination
+`repository` (`target_repo_id`). The `promote-repository-content.yml` playbook
+uses both filters so it does not promote eligible content originating in
+another repository.
 
 To advance all eligible items through the release chain, use
 `mode: all_ready`. With `wait: true` (the default), the module waits for the

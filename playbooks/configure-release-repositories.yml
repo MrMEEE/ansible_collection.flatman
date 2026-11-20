@@ -1,4 +1,8 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+# No extra variables are required; this example configures the testing -> stable chain.
 - name: Configure a testing to stable repository chain
   hosts: localhost
   connection: local

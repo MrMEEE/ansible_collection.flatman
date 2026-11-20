@@ -1,4 +1,8 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   run_cleanup: Set to true to explicitly queue cleanup; defaults to false.
 - name: Inspect configuration and optionally queue maintenance
   hosts: localhost
   connection: local

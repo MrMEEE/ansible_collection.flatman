@@ -1,4 +1,9 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   user_id: Required numeric ID of the user to grant organisation-scoped access.
+# Organisation and role names in the tasks are example configuration values.
 - name: Configure organisation-scoped access
   hosts: localhost
   connection: local

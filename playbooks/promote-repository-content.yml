@@ -1,0 +1,89 @@
+---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   from_repository: Required source repository name.
+#   to_repository: Required destination repository name; must differ from the source.
+#   promotion_kind: Content to promote: both, build (Flatpak), or external; defaults to both.
+# Example tasks below are opt-in via their example-* tags and use testing/stable.
+- name: Promote all eligible content between repositories
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/mrmeee.flatman.flatman:
+      url: "{{ flatman_url }}"
+      api_token: "{{ flatman_api_token }}"
+
+  vars:
+    flatman_url: "{{ lookup('env', 'FLATMAN_URL') }}"
+    flatman_api_token: "{{ lookup('env', 'FLATMAN_API_TOKEN') }}"
+    promotion_kind: both
+
+  tasks:
+    - name: Require distinct source and destination repositories
+      ansible.builtin.assert:
+        that:
+          - from_repository is defined
+          - from_repository | string | length > 0
+          - to_repository is defined
+          - to_repository | string | length > 0
+          - from_repository != to_repository
+        fail_msg: >-
+          Supply distinct repository names with
+          -e from_repository=testing -e to_repository=stable
+
+    - name: Promote all eligible Flatpak builds and External versions
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: target
+        kind: "{{ promotion_kind }}"
+        source_repository: "{{ from_repository }}"
+        repository: "{{ to_repository }}"
+        wait: true
+        wait_timeout: 1800
+      register: promotion_batch
+
+    - name: Show the promotions
+      ansible.builtin.debug:
+        var: promotion_batch.promotions
+
+    - name: Example - promote all eligible builds and External versions to stable
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: target
+        kind: both
+        source_repository: testing
+        repository: stable
+        wait: true
+      tags: [never, example-both]
+
+    - name: Example - promote only Flatpak builds from testing to stable
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: target
+        kind: build
+        source_repository: testing
+        repository: stable
+        wait: true
+      tags: [never, example-build]
+
+    - name: Example - promote only External versions from testing to stable
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: target
+        kind: external
+        source_repository: testing
+        repository: stable
+        wait: true
+      tags: [never, example-external]
+
+    - name: Example - promote all ready content through the release chain
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: all_ready
+        kind: both
+        wait: true
+      tags: [never, example-all-ready]
+
+    - name: Example - preview every currently eligible promotion
+      mrmeee.flatman.flatman_promotion_batch:
+        mode: all_ready
+        kind: both
+      check_mode: true
+      tags: [never, example-preview]

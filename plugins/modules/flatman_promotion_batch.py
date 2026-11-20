@@ -49,6 +49,16 @@ options:
       - Target repository ID; required with O(mode=target).
       - Mutually exclusive with O(repository).
     type: int
+  source_repository:
+    description:
+      - Restrict candidates to this source repository name.
+      - Mutually exclusive with O(source_repo_id).
+    type: str
+  source_repo_id:
+    description:
+      - Restrict candidates to this source repository ID.
+      - Mutually exclusive with O(source_repository).
+    type: int
   wait:
     description: Wait for each promotion and refresh eligibility to traverse release chains.
     type: bool
@@ -83,6 +93,7 @@ EXAMPLES = r'''
     api_token: "{{ flatman_api_token }}"
     mode: target
     repository: stable
+    source_repository: testing
     kind: both
     wait: true
 
@@ -150,6 +161,8 @@ def main():
         kind=dict(type='str', default='both', choices=['both', 'build', 'external']),
         repository=dict(type='str'),
         target_repo_id=dict(type='int'),
+        source_repository=dict(type='str'),
+        source_repo_id=dict(type='int'),
         wait=dict(type='bool', default=True),
         wait_timeout=dict(type='int', default=1800),
         wait_interval=dict(type='int', default=10),
@@ -158,7 +171,10 @@ def main():
     module = AnsibleModule(
         argument_spec=spec,
         supports_check_mode=True,
-        mutually_exclusive=[['repository', 'target_repo_id']],
+        mutually_exclusive=[
+            ['repository', 'target_repo_id'],
+            ['source_repository', 'source_repo_id'],
+        ],
     )
     validate_wait(module)
     if module.params['mode'] == 'target' and not (
@@ -174,6 +190,10 @@ def main():
         if params['repository']:
             target_id = client.resolve(
                 '/api/repositories/', 'name', params['repository'], 'Repository')['id']
+        source_id = params['source_repo_id']
+        if params['source_repository']:
+            source_id = client.resolve(
+                '/api/repositories/', 'name', params['source_repository'], 'Repository')['id']
 
         def get_candidates():
             found = []
@@ -183,6 +203,8 @@ def main():
                 found.extend(client.get_all('/api/external-ref-promotions/available/'))
             if target_id is not None:
                 found = [item for item in found if item.get('target_repo_id') == target_id]
+            if source_id is not None:
+                found = [item for item in found if item.get('source_repo_id') == source_id]
             return found
 
         dispatched = []

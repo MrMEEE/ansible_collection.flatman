@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   repository_name: Existing initial publication repository; defaults to testing.
+#   external_ref: Flatpak ref to configure; defaults to app/org.example.App/x86_64/stable.
+# The remote name, URL and display name are example configuration values in the tasks.
 - name: Configure an upstream remote and External definition
   hosts: localhost
   connection: local

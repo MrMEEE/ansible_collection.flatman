@@ -1,4 +1,14 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   ldap_hostname, ldap_base_dn, ldap_search_username: Required LDAP host, search base and test user.
+#   ldap_port: LDAP port; defaults to 636.
+#   ldap_protocol: LDAP protocol; defaults to ldaps.
+#   ldap_bind_dn, ldap_source_id: Optional bind DN and existing LDAP source ID.
+#   ldap_filter: Search filter; defaults to (objectClass=person).
+#   ldap_attr_username: Username attribute; defaults to uid.
+#   vault_ldap_bind_password: Optional bind password; store it in Ansible Vault.
 - name: Test LDAP connectivity and user lookup without changing configuration
   hosts: localhost
   connection: local

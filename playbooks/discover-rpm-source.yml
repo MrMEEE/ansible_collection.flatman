@@ -1,4 +1,9 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   rpm_git_url: Required RPM source Git URL accessible to the flat-manager server.
+#   rpm_branch: Branch to scan for spec files; defaults to main.
 - name: Discover remote RPM branches and spec files
   hosts: localhost
   connection: local

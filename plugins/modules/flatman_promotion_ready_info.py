@@ -46,6 +46,16 @@ options:
       - Restrict candidates to this target repository ID.
       - Mutually exclusive with O(repository).
     type: int
+  source_repository:
+    description:
+      - Restrict candidates to this source repository name.
+      - Mutually exclusive with O(source_repo_id).
+    type: str
+  source_repo_id:
+    description:
+      - Restrict candidates to this source repository ID.
+      - Mutually exclusive with O(source_repository).
+    type: int
 notes:
   - Requires the token promotion API and promotion permission for the source organisation.
   - Results are an eligibility snapshot; another request can change eligibility before a promotion is submitted.
@@ -108,11 +118,16 @@ def main():
         external_ref_version_id=dict(type='int'),
         repository=dict(type='str'),
         target_repo_id=dict(type='int'),
+        source_repository=dict(type='str'),
+        source_repo_id=dict(type='int'),
     )
     module = AnsibleModule(
         argument_spec=spec,
         supports_check_mode=True,
-        mutually_exclusive=[['repository', 'target_repo_id']],
+        mutually_exclusive=[
+            ['repository', 'target_repo_id'],
+            ['source_repository', 'source_repo_id'],
+        ],
         required_by={'external_ref_version_id': ['external_ref_id']},
     )
 
@@ -122,6 +137,10 @@ def main():
         if params['repository']:
             target_id = client.resolve(
                 '/api/repositories/', 'name', params['repository'], 'Repository')['id']
+        source_id = params['source_repo_id']
+        if params['source_repository']:
+            source_id = client.resolve(
+                '/api/repositories/', 'name', params['source_repository'], 'Repository')['id']
 
         candidates = []
         if params['kind'] in ('both', 'build'):
@@ -139,6 +158,8 @@ def main():
                           or item.get('external_ref_version_id') == params['external_ref_version_id']]
         if target_id is not None:
             candidates = [item for item in candidates if item.get('target_repo_id') == target_id]
+        if source_id is not None:
+            candidates = [item for item in candidates if item.get('source_repo_id') == source_id]
         module.exit_json(changed=False, ready_promotions=candidates, count=len(candidates))
 
     run_module(module, handler)

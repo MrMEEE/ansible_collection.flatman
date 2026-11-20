@@ -1,4 +1,8 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL to test.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+# No other variables are required; this playbook performs read-only checks.
 # Read-only smoke test. Safe to run against any reachable instance.
 # Usage:
 #   export FLATMAN_URL=https://flatman.example.com

@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   gpg_key_id: Required numeric ID of the existing signing key.
+#   do_renew: Set to true to perform the renewal; defaults to false.
+#   key_lifetime: Renewal lifetime: 0, 1y, 2y, 5y or 10y; defaults to 1y.
 - name: Explicitly renew an existing signing key
   hosts: localhost
   connection: local

@@ -232,13 +232,14 @@ new commit.
 `flatman_promotion_ready_info` reads either endpoint and combines the results.
 Use `kind: build|external|both`, and optionally filter by `build_id`,
 `external_ref_id`, `external_ref_version_id`, or target `repository`/
-`target_repo_id`.
+`target_repo_id`. `source_repository` or `source_repo_id` filters by the
+candidate's source repository.
 
 `flatman_promotion_batch` submits one promotion for each matching candidate:
 
 | Mode | Behavior |
 |---|---|
-| `target` | Requires `repository` or `target_repo_id`; promotes every source currently eligible for that one target. |
+| `target` | Requires `repository` or `target_repo_id`; promotes every source currently eligible for that one target, optionally filtered by `source_repository` or `source_repo_id`. |
 | `all_ready` | Promotes to all targets currently returned by the readiness endpoints. |
 
 With the default `wait: true`, it waits for the current round to finish, then

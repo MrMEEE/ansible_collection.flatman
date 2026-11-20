@@ -1,4 +1,10 @@
 ---
+# Variables:
+#   FLATMAN_URL: flat-manager server URL.
+#   FLATMAN_API_TOKEN: API token; provide through the environment or Ansible Vault.
+#   repository_id: Required numeric ID of an existing repository.
+#   do_build: Set to true to queue a BuildStream build; defaults to false.
+# The source name, Git URL, branch and element are example configuration values.
 - name: Configure and optionally build a BuildStream source
   hosts: localhost
   connection: local
